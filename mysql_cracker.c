@@ -11,7 +11,7 @@ char getHexVal(const char hex) {
 	if (hex >= 'A' && hex <= 'F') {
 		return hex + 10 - 'A';
 	}
-	if (hex >= 'a' && hex <= 'F') {
+	if (hex >= 'a' && hex <= 'f') {
 		return hex + 10 - 'a';
 	}
 	if (hex >= '0' && hex <= '9') {
@@ -36,34 +36,32 @@ void hash(const char *plain, int size, char *hash) {
 }
 
 int tryLength(int len, unsigned const char *target, char *plaintext) {
-	int base = 1;
 	int i;
 	for (i=0; i<len; i++) {
-		base *= MAX_CHAR-MIN_CHAR+1;
 		*(plaintext+i) = MIN_CHAR;
 	}
 
 	char *max = plaintext+len;
+	unsigned char h[SHA_DIGEST_LENGTH];
 
-	unsigned char h[SHA_DIGEST_LENGTH*2];
-	
-	for(i=0; i<base; i++) {
+	while(1) {
 		char *j;
-		for(j=plaintext; j<max && *(j++) == MAX_CHAR+1;) {
+		for(j=plaintext; *(j++) == MAX_CHAR+1;) {
+			if (j == max) {
+				return 0;
+			}
 			*(j-1) = MIN_CHAR;
 			(*j)++;
 		}
 		hash(plaintext, len, h);
-		if (strcmp(h, target) == 0) {
+		if (strncmp(target, h, SHA_DIGEST_LENGTH) == 0) {
 			return 1;
 		}
 		(*plaintext)++;
 	}
-	return 0;
 }
 		
 		
-
 int main(int argc, char* argv[]) {
 	
 	if (argc < 2 || argc > 3) {
@@ -71,6 +69,12 @@ int main(int argc, char* argv[]) {
 		return 0;
 	}
 
+	if (strlen(argv[1]) != SHA_DIGEST_LENGTH*2) {
+		printf("Error: Malformed hash!\n");
+		printf("Usage: %s HASH [maxlen]\n", argv[0]);
+		return 1;
+	}
+	
 	int maxlen = DEFAULT_MAX_LENGTH+1;
 	if (argc == 3) {
 		maxlen = atoi(argv[2])+1;
@@ -92,5 +96,6 @@ int main(int argc, char* argv[]) {
 			printf("Success: %s (after %ld seconds)\n", plain, end-start);
 			return 0;
 		}
+		free(plain);
 	}
 }
